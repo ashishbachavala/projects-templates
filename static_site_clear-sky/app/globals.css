@@ -1,0 +1,15 @@
+@import "tailwindcss" source(none);
+
+:root {
+  interpolate-size: allow-keywords;
+}
+
+@source "../app";
+
+details > summary {
+  list-style: none;
+}
+
+details > summary::-webkit-details-marker {
+  display: none;
+}
