@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { databaseConfigured } from '@/lib/database-config';
 import { upsertUserFromClerk } from '@/lib/data';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 import { getServerAuthContext, getServerCurrentUser } from '@/lib/server-auth';
 
@@ -46,6 +47,28 @@ async function syncSignedInUser() {
     clerkUserId: authContext.userId,
     email,
   });
+
+  const posthog = getPostHogClient();
+  // A fresh insert leaves created_at === updated_at; treat those as signups.
+  const isNewUser = record.createdAt === record.updatedAt;
+  posthog.identify({
+    distinctId: record.id,
+    properties: {
+      clerk_user_id: record.clerkUserId,
+      email: record.email,
+    },
+  });
+  if (isNewUser) {
+    posthog.capture({
+      distinctId: record.id,
+      event: 'user_signed_up',
+      properties: {
+        clerk_user_id: record.clerkUserId,
+        email: record.email,
+      },
+    });
+  }
+  await posthog.flush();
 
   return {
     signedIn: true as const,

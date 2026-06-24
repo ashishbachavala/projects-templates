@@ -1,3 +1,5 @@
+import { CustomizationToggle } from './customization-toggle';
+
 const starterRows = [
   {
     label: "Home",
@@ -139,13 +141,7 @@ export default function HomePage() {
                     </span>{" "}
                     Codex
                   </div>
-                  <input
-                    type="checkbox"
-                    name="customization-toggle"
-                    id="customization-toggle"
-                    defaultChecked
-                    className="absolute left-0 top-0 h-full w-full cursor-pointer opacity-0"
-                  />
+                  <CustomizationToggle />
                 </div>
               </div>
             </div>

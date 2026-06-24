@@ -2,6 +2,7 @@ import type Stripe from 'stripe';
 import { NextResponse } from 'next/server';
 import { getStripeClient } from '@/lib/stripe';
 import { syncPurchaseFromCheckoutSession } from '@/lib/purchase-sync';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 export async function POST(request: Request) {
   try {
@@ -30,7 +31,22 @@ export async function POST(request: Request) {
     }
 
     if (event.type === 'checkout.session.completed') {
-      await syncPurchaseFromCheckoutSession(event.data.object as Stripe.Checkout.Session);
+      const result = await syncPurchaseFromCheckoutSession(
+        event.data.object as Stripe.Checkout.Session,
+      );
+
+      if (result?.userId) {
+        const posthog = getPostHogClient();
+        posthog.capture({
+          distinctId: result.userId,
+          event: 'purchase_completed',
+          properties: {
+            stripe_payment_intent_id: result.stripePaymentIntentId,
+            status: result.status,
+          },
+        });
+        await posthog.flush();
+      }
     }
 
     return NextResponse.json({ received: true });

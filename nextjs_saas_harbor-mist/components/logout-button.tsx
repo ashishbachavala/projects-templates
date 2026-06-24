@@ -1,6 +1,7 @@
 'use client';
 
 import { useClerk } from '@clerk/nextjs';
+import posthog from 'posthog-js';
 
 function LogOutIcon({ className = '' }: { className?: string }) {
   return (
@@ -16,7 +17,11 @@ export function LogoutButton() {
   return (
     <button
       className="flex w-full items-center gap-2.5 rounded-md px-3 py-1.5 text-[13px] text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-      onClick={() => signOut({ redirectUrl: '/' })}
+      onClick={() => {
+        posthog.capture('user_logged_out');
+        posthog.reset();
+        signOut({ redirectUrl: '/' });
+      }}
     >
       <LogOutIcon className="h-4 w-4" />
       Log out

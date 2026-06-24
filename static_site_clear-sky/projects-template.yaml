@@ -14,6 +14,7 @@ metadata:
   owner: stripe
 services:
   - vercel/project
+  - posthog/analytics
 next_steps:
   - label: Run locally
     command: npm run dev
@@ -28,3 +29,7 @@ tier_plans:
     free_lowest_cost: Vercel/hobby
     starter_paid: Vercel/pro
     higher_scale: Vercel/pro
+  posthog/analytics:
+    free_lowest_cost: PostHog/free
+    starter_paid: PostHog/pay_as_you_go
+    higher_scale: PostHog/pay_as_you_go

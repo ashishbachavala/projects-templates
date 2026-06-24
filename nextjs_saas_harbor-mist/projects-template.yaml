@@ -16,6 +16,7 @@ services:
   - netlify/project
   - clerk/auth
   - render/postgres
+  - posthog/analytics
 next_steps:
   - label: Run locally
     command: npm run dev
@@ -37,3 +38,7 @@ tier_plans:
       instance_type: basic-256mb
     higher_scale:
       instance_type: basic-4gb
+  posthog/analytics:
+    free_lowest_cost: PostHog/free
+    starter_paid: PostHog/pay_as_you_go
+    higher_scale: PostHog/pay_as_you_go
