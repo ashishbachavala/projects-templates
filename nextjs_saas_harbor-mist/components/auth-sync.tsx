@@ -2,6 +2,7 @@
 
 import { useAuth } from '@clerk/nextjs';
 import { useEffect, useRef } from 'react';
+import posthog from 'posthog-js';
 
 export function AuthSync() {
   const { isLoaded, isSignedIn, sessionId } = useAuth();
@@ -17,9 +18,23 @@ export function AuthSync() {
     void fetch('/auth/sync', {
       credentials: 'same-origin',
       method: 'POST',
-    }).catch(() => {
-      lastSyncedSessionID.current = null;
-    });
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          return;
+        }
+
+        const payload = (await response.json()) as { userId?: string };
+
+        if (payload.userId) {
+          posthog.identify(payload.userId);
+        }
+
+        posthog.capture('user_signed_in');
+      })
+      .catch(() => {
+        lastSyncedSessionID.current = null;
+      });
   }, [isLoaded, isSignedIn, sessionId]);
 
   return null;

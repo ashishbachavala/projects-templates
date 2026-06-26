@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import posthog from 'posthog-js';
 import { mutedText, secondaryButton } from '@/lib/ui';
 
 export function ManageSubscriptionButton({
@@ -17,6 +18,8 @@ export function ManageSubscriptionButton({
     try {
       setLoading(true);
       setError(null);
+
+      posthog.capture('billing_portal_opened');
 
       const response = await fetch('/api/billing-portal', {
         method: 'POST',

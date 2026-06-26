@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import posthog from 'posthog-js';
 import { primaryButton, mutedText } from '@/lib/ui';
 
 export function CheckoutButton({ label = 'Start checkout' }: { label?: string }) {
@@ -12,9 +13,15 @@ export function CheckoutButton({ label = 'Start checkout' }: { label?: string })
       setLoading(true);
       setError(null);
 
+      posthog.capture('checkout_started');
+
       const response = await fetch('/api/checkout', {
         credentials: 'same-origin',
         method: 'POST',
+        headers: {
+          'X-POSTHOG-DISTINCT-ID': posthog.get_distinct_id(),
+          'X-POSTHOG-SESSION-ID': posthog.get_session_id(),
+        },
       });
 
       const payload = (await response.json()) as { error?: string; url?: string };
@@ -30,6 +37,7 @@ export function CheckoutButton({ label = 'Start checkout' }: { label?: string })
       window.location.assign(payload.url);
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Unable to launch checkout.';
+      posthog.captureException(err);
       setError(message);
       setLoading(false);
     }

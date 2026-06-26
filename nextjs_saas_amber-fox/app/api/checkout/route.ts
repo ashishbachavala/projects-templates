@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server';
 import { upsertUserFromClerk } from '@/lib/data';
 import { databaseConfigured } from '@/lib/database-config';
 import { getServerAuthContext, getServerCurrentUser } from '@/lib/server-auth';
+import { getPostHogClient } from '@/lib/posthog-server';
 
 import { getStripeClient } from '@/lib/stripe';
 
@@ -72,6 +73,25 @@ export async function POST(request: Request) {
 
     if (!session.url) {
       return NextResponse.json({ error: 'Checkout session did not return a redirect URL.' }, { status: 500 });
+    }
+
+    const distinctId =
+      request.headers.get('x-posthog-distinct-id') ?? appUserId ?? clerkUserId ?? undefined;
+    if (distinctId) {
+      const sessionId = request.headers.get('x-posthog-session-id');
+      const posthog = getPostHogClient();
+      posthog.capture({
+        distinctId,
+        event: 'checkout_session_created',
+        properties: {
+          stripe_session_id: session.id,
+          stripe_price_id: priceId,
+          customer_email: customerEmail,
+          mode: 'subscription',
+          ...(sessionId ? { $session_id: sessionId } : {}),
+        },
+      });
+      await posthog.flush();
     }
 
     return NextResponse.json({ url: session.url });

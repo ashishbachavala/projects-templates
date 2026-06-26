@@ -16,6 +16,7 @@ services:
   - vercel/project
   - clerk/auth
   - neon/postgres
+  - posthog/analytics
 next_steps:
   - label: Set up Stripe products
     command: npm run setup:stripe
@@ -40,3 +41,7 @@ tier_plans:
     free_lowest_cost: Neon/free
     starter_paid: Neon/launch
     higher_scale: Neon/launch
+  posthog/analytics:
+    free_lowest_cost: PostHog/free
+    starter_paid: PostHog/pay_as_you_go
+    higher_scale: PostHog/pay_as_you_go

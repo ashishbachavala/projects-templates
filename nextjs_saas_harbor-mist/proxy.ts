@@ -20,5 +20,5 @@ const middleware = clerkConfigured
 export default middleware;
 
 export const config = {
-  matcher: ['/((?!_next|.*\\..*).*)', '/'],
+  matcher: ['/((?!_next|ingest|.*\\..*).*)', '/'],
 };
