@@ -2,8 +2,6 @@ import { execFileSync } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
-import * as readline from 'node:readline/promises';
-import { stdin as input, stdout as output } from 'node:process';
 import Stripe from 'stripe';
 
 const ENV_FILE = '.env.local';
@@ -25,7 +23,12 @@ if (existingPriceId) {
   process.exit(0);
 }
 
-const secretKey = await resolveSecretKey();
+const secretKey = resolveSecretKey();
+if (!secretKey) {
+  console.log('Skipping Stripe setup: no secret key found in env or Stripe CLI config.');
+  console.log('Run `stripe login` or set STRIPE_SECRET_KEY, then retry with `npm run setup:stripe`.');
+  process.exit(0);
+}
 if (secretKey.startsWith('rk_')) {
   throw new Error('Stripe setup requires a secret key such as sk_test_..., not a restricted key.');
 }
@@ -77,39 +80,42 @@ function resolveSecretKeyFromStripeCli() {
   }
 }
 
+function parseConfigAssignment(line, key) {
+  const match = line.match(new RegExp(`^${key}\\s*=\\s*(?:'([^']*)'|"([^"]*)"|([^\\s]+))`));
+  if (!match) {
+    return '';
+  }
+  return (match[1] || match[2] || match[3] || '').trim();
+}
+
 function parseTestModeApiKeyFromStripeCliConfig(config) {
   let profileName = 'default';
   for (const line of config.split(/\r?\n/)) {
-    const projectMatch = line.match(/^project-name\s*=\s*(?:"([^"]+)"|([^\s]+))/);
-    if (projectMatch) {
-      profileName = (projectMatch[1] || projectMatch[2] || 'default').trim();
+    const value = parseConfigAssignment(line.trim(), 'project-name');
+    if (value) {
+      profileName = value;
       break;
     }
   }
 
-  const activeSectionHeader =
-    profileName === 'default' ? '[default]' : `["${profileName}"]`;
+  const activeSectionHeaders = new Set([
+    `[${profileName}]`,
+    `["${profileName}"]`,
+    `['${profileName}']`,
+  ]);
   let inActiveSection = false;
 
   for (const line of config.split(/\r?\n/)) {
-    if (line.trim() === activeSectionHeader) {
-      inActiveSection = true;
-      continue;
-    }
-    if (/^\[/.test(line.trim())) {
-      inActiveSection = false;
+    const trimmed = line.trim();
+    if (/^\[/.test(trimmed)) {
+      inActiveSection = activeSectionHeaders.has(trimmed);
       continue;
     }
     if (!inActiveSection) {
       continue;
     }
 
-    const keyMatch = line.match(/^test_mode_api_key\s*=\s*"([^"]*)"/);
-    if (!keyMatch) {
-      continue;
-    }
-
-    const secretKey = keyMatch[1].trim();
+    const secretKey = parseConfigAssignment(trimmed, 'test_mode_api_key');
     if (secretKey.startsWith('sk_test_') && !secretKey.includes('*')) {
       return { profileName, secretKey };
     }
@@ -118,7 +124,7 @@ function parseTestModeApiKeyFromStripeCliConfig(config) {
   return { profileName: '', secretKey: '' };
 }
 
-async function resolveSecretKey() {
+function resolveSecretKey() {
   const existing = getEnvValue('STRIPE_SECRET_KEY') || getEnvValue('STRIPE_API_KEY');
   if (existing) {
     return existing;
@@ -130,15 +136,7 @@ async function resolveSecretKey() {
     return cliSecretKey;
   }
 
-  const rl = readline.createInterface({ input, output });
-  try {
-    const value = await rl.question(
-      'Paste your Stripe secret key (sk_test_...), or run `stripe login` first: ',
-    );
-    return value.trim();
-  } finally {
-    rl.close();
-  }
+  return '';
 }
 
 async function getOrCreateProduct(stripe) {
